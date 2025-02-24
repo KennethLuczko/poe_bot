@@ -47,6 +47,31 @@ try {
     Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller
     Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT /NORESTART" -Wait
 
+    # Refresh PATH environment
+    Write-Log "Refreshing environment PATH..."
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    
+    # Verify Git installation
+    Write-Log "Verifying Git installation..."
+    $retryCount = 0
+    $maxRetries = 3
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Start-Sleep -Seconds 10  # Give some time for installation to complete
+            $gitVersion = & "C:\Program Files\Git\cmd\git.exe" --version
+            Write-Log "Git installed successfully: $gitVersion"
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                throw "Failed to verify Git installation after $maxRetries attempts"
+            }
+            Write-Log "Waiting for Git installation to complete... (Attempt $retryCount of $maxRetries)"
+            Start-Sleep -Seconds 10
+        }
+    }
+
     # 2. Clone Repository
     Write-Log "Cloning POE Bot repository..."
     $repoPath = "C:\poe_bot"
